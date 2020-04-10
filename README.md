@@ -7,7 +7,8 @@ numpy, pandas, matplotlib, time, torch, copy, argparse
 
 
 ### parser inputs:
-"--symbol", "-s", help="set ticker symbol"
+"--symbol", "-s", help="set ticker symbol" 
+
 "--split", "-t", help="set date for train-test-splitting"
 
 
