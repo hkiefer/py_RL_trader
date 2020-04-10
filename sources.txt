@@ -1,0 +1,3 @@
+#https://towardsdatascience.com/algorithmic-trading-bot-python-ab8f42c37145
+#https://github.com/pskrunner14/trading-bot
+#https://github.com/shivamakhauri04/TradingBot/blob/master/1_dqn.ipynb
