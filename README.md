@@ -1,3 +1,5 @@
+#py_RL_trader (in progress)
+
 python script to run Q-learning trading bot in Terminal for stock data set in subfolder /data by choice.
 
 
