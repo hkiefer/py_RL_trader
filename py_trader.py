@@ -1,14 +1,15 @@
 '''
-python script to run Q-learning trading bot in Terminal for stock trajectory in subfolder /data by choice
+python script to run Q-learning trading bot in Terminal for stock trajectory with given symbol
 
 Implementation of neural network by pytorch
 
 parser inputs:
 "--symbol", "-s", help="set ticker symbol"
+"--interval", "-i", help="set time step of data"
 "--split", "-t", help="set date for train-test-splitting"
 
 
-#example in terminal: python3 py_trader.py -s googl -t '2016-01-01'
+#example in terminal: python3 py_trader.py -s GOOGL -i daily -t '2018-01-01'
 '''
 
 import numpy as np
@@ -25,95 +26,29 @@ import torch.nn.functional as F
 import copy
 import argparse
 
-
-class Environment:
-    
-    def __init__(self, data, history_t=90):
-        self.data = data
-        self.history_t = history_t
-        self.reset()
-        
-    def reset(self):
-        self.t = 0
-        self.done = False
-        self.profits = 0
-        self.positions = []
-        self.position_value = 0
-        self.history = [0 for _ in range(self.history_t)]
-        return [self.position_value] + self.history # obs
-    
-    def step(self, act):
-        reward = 0
-        
-        # act = 0: stay, 1: buy, 2: sell
-        if act == 1:
-            self.positions.append(self.data.iloc[self.t, :]['Close'])
-        elif act == 2: # sell
-            if len(self.positions) == 0:
-                reward = -1
-            else:
-                profits = 0
-                for p in self.positions:
-                    profits += (self.data.iloc[self.t, :]['Close'] - p)
-                reward += profits
-                self.profits += profits
-                self.positions = []
-        
-        # set next time
-        self.t += 1
-        
-        self.position_value = 0
-        for p in self.positions:
-            self.position_value += (self.data.iloc[self.t, :]['Close'] - p)
-        self.history.pop(0)
-        self.history.append(self.data.iloc[self.t, :]['Close'] - self.data.iloc[(self.t-1), :]['Close'])
-        if (self.t==len(self.data)-1):
-            self.done=True
-        # clipping reward
-        if reward > 0:
-            reward = 1
-        elif reward < 0:
-            reward = -1
-        #print ("t={%d}, done={%str}"%(self.t,self.done))
-        return [self.position_value] + self.history, reward, self.done # obs, reward, don
-    
-    
-class Q_Network(nn.Module):
-
-    def __init__(self,obs_len,hidden_size,actions_n):
-
-        super(Q_Network,self).__init__()
-
-        self.fc_val = nn.Sequential(
-            nn.Linear(obs_len, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, actions_n)
-        )
+from loaddata import *
+from q_learner import *
 
 
-    def forward(self,x):
-        h =  self.fc_val(x)
-        return (h)
-    
     
     
 #--------------------code-----------------
 
 parser =  argparse.ArgumentParser()
 parser.add_argument("--symbol", "-s", help="set ticker symbol")
+parser.add_argument("--interval", "-i", help="set time step of data")
 parser.add_argument("--split", "-t", help="set date for train-test-splitting")
 
 args = parser.parse_args()
 
-if args.symbol and args.split:
+if args.symbol and args.split and args.interval:
     print("Load close price trajectory of %s" % args.symbol)
 
-    data = pd.read_csv('data/' + args.symbol + '.csv')
+   # data = pd.read_csv('data/' + args.symbol + '.csv')
+    data = loaddata(symbol = args.symbol, interval = args.interval)
     data['Date'] = pd.to_datetime(data['Date'])
     data = data.set_index('Date')
-    data = data.drop('Unnamed: 0', axis = 1)
+    #data = data.drop('Unnamed: 0', axis = 1)
     #print(data.index.min(), data.index.max())
     #data.head()
     
@@ -143,7 +78,7 @@ step_max = len(env.data)-1
 memory_size = 200
 batch_size = 50
 
-obs, reward, done = env.step(5)
+#obs, reward, done = env.step(5)
 
 memory = []
 total_step = 0
@@ -233,8 +168,11 @@ for epoch in range(n_epochs):
             #print('\t'.join(map(str, [epoch+1, epsilon, total_step, log_reward, log_loss, elapsed_time])))
             start = time.time()
             
+torch.save(Q, 'model_' + str(args.symbol) + '.pth')
+print('Successfully trained trading bot!')
             
             
+print('Apply trained trader on test data...')            
 test_env = Environment(test)
 pobs = test_env.reset()
 test_acts = []
